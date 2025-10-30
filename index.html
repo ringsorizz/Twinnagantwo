@@ -517,11 +517,47 @@
             }
           };
         })(),
-        printErr: function (text) {
-          if (arguments.length > 1)
-            text = Array.prototype.slice.call(arguments).join(" ");
-          console.error(text);
-        },
+       printErr: function (text) {
+  try {
+    // Combine multiple args like original code
+    if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(" ");
+
+    // Normalize to something console-friendly
+    if (typeof text === "undefined" || text === null) {
+      console.error("[printErr] <no content>", text);
+      return;
+    }
+
+    // If it's not a string, use inspect-like fallback
+    if (typeof text !== "string") {
+      // For objects, arrays, Errors, etc.
+      try {
+        // try JSON first (may fail for circular refs)
+        console.error("[printErr]", JSON.stringify(text));
+        return;
+      } catch (e) {
+        // fallback to logging the object directly
+        console.error("[printErr] (object)", text);
+        return;
+      }
+    }
+
+    // If it's a string and ridiculously long, truncate to avoid freezing devtools
+    var MAX_LOG_LEN = 2000;
+    if (text.length > MAX_LOG_LEN) {
+      console.error("[printErr] (truncated)", text.slice(0, MAX_LOG_LEN) + "… (truncated, total length: " + text.length + ")");
+    } else {
+      console.error(text);
+    }
+  } catch (err) {
+    // If the logger itself fails for any reason, fall back to a minimal message
+    try {
+      console.error("[printErr] logger failed:", err);
+    } catch (ignore) {
+      // nothing we can do safely
+    }
+  }
+}
         canvas: (function () {
           var canvas = document.getElementById("canvas");
 
